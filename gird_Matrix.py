@@ -7,7 +7,7 @@ import pandas as pd
 import sql_model,other
 import angle_class
 import Matri_algorithm
-
+import file_model
 
 def cel_dd(gird_dict,girdid):
     if 'None' in gird_dict[girdid]['cel2']:
@@ -32,106 +32,42 @@ def cel_dd(gird_dict,girdid):
     else:
         cel6 = gird_dict[girdid]['cel6']
     return cel2,cel3,cel4,cel5,cel6
-def create_girdcsv(gird_dict,outpath):
-    exe_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
-    # 写入栅格csv
-    dt, dtime = other.get_date()
-    # 生成点图
-    out = open(outpath+"//"+'gird_%s.csv' % (dtime), "w", newline="")
-    csv_writer = csv.writer(out, dialect="excel")
-    # Number of samples
-    csv_writer.writerow(['gird_id', 'samples', 'rsrp', 'rsrq', 'lon', 'lat','cel1','cel2','cel3','cel4','cel5','cel6'])
-    # for girdid in gird_data:
-    # csv_writer.writerows(gird_data)
-    for girdid in gird_dict:
-        cel2,cel3,cel4,cel5,cel6 =cel_dd(gird_dict,girdid)
-        csv_writer.writerow([girdid
-                            , gird_dict[girdid]['samples']
-                            , round(gird_dict[girdid]['rsrp'],2)
-                            , round(gird_dict[girdid]['rsrq'],2)
-                            , gird_dict[girdid]['lon']
-                            , gird_dict[girdid]['lat']
-                            ,gird_dict[girdid]['cel1']
-                            ,cel2
-                            ,cel3
-                            ,cel4
-                            ,cel5
-                            ,cel6 ])
 
 
+def None2zore(text):
+    if 'None' in text :
+        return 0
+    else:
+        return  text
 def eci_gc(seci,gc_dict):
-    scellname,slon,slat,sdir = None,0,0,0
+    result_dict = {'cellname':'111','lon':0,'lat':0,'dir':0,'earfcn':0,'pci':0,'tac':0}
+    #scellname,slon,slat,sdir = None,0,0,0
     if str(seci) in gc_dict:
-        scellname = gc_dict[str(seci)]['cellname']
-        slon = float(gc_dict[str(seci)]['lon'])
-        slat = float(gc_dict[str(seci)]['lat'])
-        sdir = int(gc_dict[str(seci)]['dir'])
-    return  scellname,slon,slat,sdir
-
-def create_matrixcsv(matrix_cell,outpath):
-    exe_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
-    # 写入栅格csv
-    dt, dtime = other.get_date()
-    gc_dict = sql_model.get_gc()
-    # 生成点图
-    out = open(outpath + "//" + 'matrix_cell_%s.csv' % (dtime), "w", newline="")
-    csv_writer = csv.writer(out, dialect="excel")
-    csv_writer.writerow(['SECI','scellname', 'DECI','dcellname', 'Correlation_degree','dist','ttCA','ttNA'])
-    for seci in matrix_cell :
-        scellname,slon,slat,sdir = eci_gc(seci,gc_dict)
-        for deci in matrix_cell[seci]:
-            try:
-                dcellname, dlon, dlat, ddir = eci_gc(deci, gc_dict)
-
-                dist,ttCA,ttNA = angle_class.tta(slon,slat,sdir,dlon,dlat,ddir)
-
-                csv_writer.writerow([seci,scellname,deci,dcellname,matrix_cell[seci][deci],dist,ttCA,ttNA])
-            except Exception as e:
-                print(e)
+        result_dict['cellname'] = None2zore(gc_dict[str(seci)]['cellname']) #gc_dict[str(seci)]['cellname']
+        result_dict['lon'] =     float(None2zore(gc_dict[str(seci)]['lon']))              #float(gc_dict[str(seci)]['lon'])
+        result_dict['lat'] =  float(None2zore(gc_dict[str(seci)]['lat']))      #float(gc_dict[str(seci)]['lat'])
+        result_dict['dir'] = int(None2zore(gc_dict[str(seci)]['dir']))
+        result_dict['earfcn'] = int(None2zore(gc_dict[str(seci)]['earfcn'])) # int(gc_dict[str(seci)]['earfcn'])
+        result_dict['pci'] = int(None2zore(gc_dict[str(seci)]['pci'])) #int(gc_dict[str(seci)]['pci'])
+        result_dict['tac'] = int(None2zore(gc_dict[str(seci)]['tac'])) #int(gc_dict[str(seci)]['tac'])
+    return  result_dict
 
 
 
-def create_cellcsv(cell_dict,outpath):
-    exe_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
-    # 写入栅格csv
-    dt, dtime = other.get_date()
-    gc_dict = sql_model.get_gc()
-    # 生成点阵CSV
-    out = open(outpath +"//"+'cell_gird_%s.csv' % (dtime), "w", newline="")
-    csv_writer = csv.writer(out, dialect="excel")
-    csv_writer.writerow(['ECI','enbid','lcrid','cellname', 'gird_id', 'samples', 'rsrp', 'rsrq', 'lon', 'lat'])
-    # for girdid in gird_data:
-    # csv_writer.writerows(gird_data)
-    for cur_eci in cell_dict:
-        cellname = None
-        enbid = int(cur_eci / 256)
-        lcrid = divmod(cur_eci, 256)[1]
-        cgi = '460-00-' + str(enbid) + '-' + str(lcrid)
-        if str(cur_eci) in gc_dict :
-            cellname = gc_dict[str(cur_eci)]['cellname']
-        else:
-            pass
-        for cur_girdid in cell_dict[cur_eci]:
-            csv_writer.writerow([cur_eci,enbid,lcrid,cellname
-                                    , cur_girdid, cell_dict[cur_eci][cur_girdid]['samples']
-                                    , round(cell_dict[cur_eci][cur_girdid]['rsrp'],2)
-                                    , round(cell_dict[cur_eci][cur_girdid]['rsrq'],2)
-                                    , cell_dict[cur_eci][cur_girdid]['lon']
-                                    , cell_dict[cur_eci][cur_girdid]['lat']])
+
 
 
 
 
 
 def gird_main(path):
-    gird_dict = {}
-    # {gird:{rsrp: , samples: , cells:{cel1:{rsrp:,samples:},cel2:{rsrp:,samples:} }  }
-    cell_dict = {}
-    # {cel1:{gird1:{rsrp:,samples:},gird2:{rsrp:,samples:}},cel2:{gird3:{rsrp:,samples:},gird4:{rsrp:,samples:}},}
-    matrix_cell = {}
-    cell_gird = {}
-    gird_cell = {}
-    # {cell1:{cell2:XX,cell3:XX}}
+    gird_dict = {}  # {gird:{rsrp: , samples: , cells:{cel1:{rsrp:,samples:},cel2:{rsrp:,samples:} }  }
+    cell_dict = {}  # {cel1:{gird1:{rsrp:,samples:},gird2:{rsrp:,samples:}},cel2:{gird3:{rsrp:,samples:},gird4:{rsrp:,samples:}},}
+    matrix_cell = {} #相关性字典 {cell1:{cell2:XX,cell3:XX}}
+    cell_gird = {} #小区栅格字典
+    gird_cell = {}  # 栅格字典
+    pci_dict = {}
+    gc_dict = sql_model.get_gc()
     files = os.listdir(path)
     p = 0
     for file in files:
@@ -155,8 +91,17 @@ def gird_main(path):
                 cell_gird,gird_cell =Matri_algorithm.cell_gird_create(cur_eci,cur_girdid,cell_gird,gird_cell)
             except Exception as e:
                 print(e)
+
+
+    #处理cell_gird内的rsrp
+    # gird_cell = {gird_id:{eci1:rsrp,eci2:rsrp}}
+    # cell_dict = {eci1:{girdid:{rsrp:-100,rsrq:-8,samples:11}}}
+    # for  cur_girdid in  gird_cell:
+    #     for cur_eci in gird_cell[cur_girdid]:
+    #         gird_cell[cur_girdid][cur_eci]= cell_dict[cur_eci][cur_girdid]['rsrp']
     #关联计算汇总至 matrix_cell表
     for cur_eci in cell_gird :
+        #增加过滤条件 rsrp相差在-10dB以内为有效小区
         gird_list = list(set([x for x in cell_gird[cur_eci]] ))#list(set(ids))
         gird_sum = len(gird_list)#总栅格数
         eci_list = Matri_algorithm.girdincell(gird_list,gird_cell)
@@ -164,22 +109,63 @@ def gird_main(path):
             if d_eci != cur_eci :
                 d_gird_list = list(set([x for x in cell_gird[d_eci]] ))
                 repeat_list = [x for x in gird_list if x in d_gird_list]
-                repeat_num = len(repeat_list)
-                if cur_eci in matrix_cell :
-                    matrix_cell[cur_eci][d_eci] = round(100*repeat_num/gird_sum,2)
-                else:
-                    matrix_cell[cur_eci] = {d_eci:round(100*repeat_num/gird_sum,2)}
-    return  gird_dict,cell_dict,matrix_cell
+                total_gird = 0
+                for  gird in repeat_list :
+                    if   abs(float(cell_dict[cur_eci][gird]['rsrp']) - float(cell_dict[d_eci][gird]['rsrp'])) <=10 :
+                        total_gird +=1
+                    else:
+                        pass
+                #repeat_num = total_gird # len(repeat_list)
+                cresult_dict = eci_gc(cur_eci, gc_dict)
+                s_earfcn ,s_pci = cresult_dict['earfcn'],cresult_dict['pci']
+                sresult_dict = eci_gc(d_eci, gc_dict)
+                d_earfcn, d_pci = sresult_dict['earfcn'], sresult_dict['pci']
+                if s_earfcn == d_earfcn and s_pci == d_pci:
+                    pci_tt = str(s_earfcn) + '_' + str(s_pci) + "-" + str(d_earfcn) + '_' + str(d_pci)
+                    if  cur_eci in pci_dict :
+                        if d_eci in pci_dict[cur_eci]:
+                            pass
+                        else:
+                            pci_dict[cur_eci][d_eci] = {'pci_matrix': pci_tt,
+                                                        'matrix': round(100 * total_gird / gird_sum, 2)}
 
+                    else:
+                        pci_dict[cur_eci] = {}
+                        pci_dict[cur_eci][d_eci] = {'pci_matrix':pci_tt,'matrix':round(100*total_gird/gird_sum,2)}
+                else:
+                    pci_tt = str(s_earfcn) + '_' + str(s_pci) + "-" + str(d_earfcn) + '_' + str(d_pci)
+                if cur_eci in matrix_cell :
+                    if  d_eci in  matrix_cell[cur_eci] :
+                        pass
+                    else:
+                        matrix_cell[cur_eci][d_eci] = {}
+                        matrix_cell[cur_eci][d_eci]['pci_matrix'] = pci_tt
+                        matrix_cell[cur_eci][d_eci]['matrix'] = round(100*total_gird/gird_sum,2)
+                else:
+                    matrix_cell[cur_eci] = {}
+                    matrix_cell[cur_eci][d_eci] = {}
+                    matrix_cell[cur_eci][d_eci]['pci_matrix'] = pci_tt
+                    matrix_cell[cur_eci][d_eci]['matrix']  =round(100*total_gird/gird_sum,2)
+
+
+    #pci优化思路
+    # for  cur_eci in pci_dict :
+    #     for  d_eci in pci_dict[cur_eci]:
+    #         s_matrix = pci_dict[cur_eci][d_eci]['matrix']
+    #         d_matrix = pci_dict[d_eci][cur_eci]['matrix']
+    #         if  s_matrix >  d_matrix  and  s_matrix >50 :
+    #             result_dict  =eci_gc(cur_eci,gc_dict)
+    #             earfcn = result_dict['earfcn']
+    return  gird_dict,cell_dict,matrix_cell
+def pcianalysis(matrix_cell):
+    pass
 def gird_cells(cell_dict):
     #栅格6强小区计算
     gird_cels = {}
     gc_dict = sql_model.get_gc()
     for cur_eci in cell_dict:
-        if str(cur_eci) in gc_dict:
-            celname = gc_dict[str(cur_eci)]['cellname']
-        else:
-            celname = '111'
+        result_dict = eci_gc(cur_eci,gc_dict)
+        celname =  result_dict['cellname']
         for cur_girdid in cell_dict[cur_eci]:
             cur_samples = cell_dict[cur_eci][cur_girdid]['samples']
             if cur_girdid in gird_cels:
@@ -220,28 +206,22 @@ def main(path):
     #完成gird栅格后，进行小区栅格相关性计算
     #cell_dict[cur_eci][cur_girdid] = {'rsrp': cur_rsrp, 'rsrq': cur_rsrq, 'samples': 1, 'lon': r_lon,'lat': r_lat}
     gird_cels = gird_cells(cell_dict)
-                #if cur_samples > gird_cels[cur_girdid]['cel1']:
     #完成最多采样点6个小区进行插入字典数据
     for cur_girdid in gird_cels :
         for cel_num in gird_cels[cur_girdid]:
             gird_dict[cur_girdid][cel_num] = str(gird_cels[cur_girdid][cel_num]['cellname']) +"("+str(gird_cels[cur_girdid][cel_num]['eci']) +")"+":"+str(gird_cels[cur_girdid][cel_num]['samples'])
-
-
     #小区关联
     exe_path = os.path.split(os.path.abspath(sys.argv[0]))[0]
-    # cell_dict[cur_eci][cur_girdid]['rsrp'] = cur_rsrp
-    # cell_dict[cur_eci][cur_girdid]['samples'] = 1
-    other.mkdir(exe_path +"//"+"result"+"//"+dtime)
-    outpath = exe_path +"//"+"result"+"//"+dtime
-    create_matrixcsv(matrix_cell,outpath)
-    create_girdcsv(gird_dict,outpath)
-    create_cellcsv(cell_dict,outpath)
+    result_path = exe_path +"//"+"result"+"//"+dtime
+    other.mkdir(result_path) #判断结果目录是否存在，不存在则新建
+    file_model.create_matrixcsv(matrix_cell,result_path)
+    file_model.create_girdcsv(gird_dict,result_path)
+    file_model.create_cellcsv(cell_dict,result_path)
 
 
 
-
-
-
+path = 'd:/temp/20210827/20210826-mdt'
+main(path)
 
 
 
