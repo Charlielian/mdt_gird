@@ -101,7 +101,7 @@ def gird_main(path):
     #         gird_cell[cur_girdid][cur_eci]= cell_dict[cur_eci][cur_girdid]['rsrp']
     #关联计算汇总至 matrix_cell表
     for cur_eci in cell_gird :
-        #增加过滤条件 rsrp相差在-10dB以内为有效小区
+        
         gird_list = list(set([x for x in cell_gird[cur_eci]] ))#list(set(ids))
         gird_sum = len(gird_list)#总栅格数
         eci_list = Matri_algorithm.girdincell(gird_list,gird_cell)
@@ -111,8 +111,9 @@ def gird_main(path):
                 repeat_list = [x for x in gird_list if x in d_gird_list]
                 total_gird = 0
                 for  gird in repeat_list :
+                    #增加过滤条件 rsrp相差在-10dB以内为有效小区
                     if   abs(float(cell_dict[cur_eci][gird]['rsrp']) - float(cell_dict[d_eci][gird]['rsrp'])) <=10 :
-                        total_gird +=1
+                        total_gird +=1 #符合条件栅格+1
                     else:
                         pass
                 #repeat_num = total_gird # len(repeat_list)
